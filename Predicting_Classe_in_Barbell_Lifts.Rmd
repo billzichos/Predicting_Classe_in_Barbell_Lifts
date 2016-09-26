@@ -283,14 +283,34 @@ pred.lda <- predict(fit.lda, train2)
 ```
 
 ```{r}
-#confusionMatrix(pred.rpart, train2$classe)
-#confusionMatrix(pred.gbm, train2$classe)
+confusionMatrix(pred.rpart, train2$classe)
+confusionMatrix(pred.gbm, train2$classe)
 #confusionMatrix(pred.svm, train2$classe)
 #confusionMatrix(pred.rf, train2$classe)
-#confusionMatrix(pred.lda, train2$classe)
+confusionMatrix(pred.lda, train2$classe)
 ```
 
 #Model and Feature Selection
+
+Recursive Partitioning/Decision Trees Accuracy: **0.5998**
+Gradient Boosting (GBM) Accuracy: **0.9954**
+Random Forest Accuracy: **NA**
+Linear Discriminant Analysis (LDA) Accuracy: **0.8413**
+
+At 99.54% Accuracy, we will use the GBM model for predicting new observations.
+
+The best predictors for this dataset are below.
+
+```{r}
+predictors(fit.gbm)
+```
+
+#Prediction
+
+```{r}
+test$prediction <- predict(fit.rpart, test)
+test[,which(names(test) %in% c("problem_id", "prediction"))]
+```
 
 #Appendix
 
