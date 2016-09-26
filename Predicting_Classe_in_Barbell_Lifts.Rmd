@@ -1,0 +1,301 @@
+---
+title: "Predicting Classe in Barbell Lifts"
+author: "Bill Zichos"
+date: "September 25, 2016"
+output: html_document
+---
+
+#Intro
+
+[Executive Summary here]
+
+#Setup
+
+```{r, message=FALSE, warning=FALSE}
+library("caret")
+library("Metrics")
+library("e1071")
+library("lubridate")
+
+setwd("~/Coursera-Data-Science/08 Practical Machine Learning")
+
+set.seed(10)
+```
+
+##Gather the data.
+
+```{r}
+train <- read.csv("pml-training.csv", stringsAsFactors = FALSE)
+test <- read.csv("pml-testing.csv", stringsAsFactors = FALSE)
+
+inSplit <- createDataPartition(train$classe, p = .7, list = FALSE)
+```
+
+##Prepare the data.
+
+*X* is a unique identifier, so we want to make sure it is excluded from model fitting.
+
+```{r}
+exclude.predictors <- which(names(train)=="X")
+```
+
+Drop predictors that have more than 19000 NULLS.  This is way too sparse to add any value.
+
+```{r}
+toomanynulls <- which(sapply(train, function(x) {length(x[is.na(x)])}) > 19000)
+
+train <- train[,-toomanynulls]
+test <- test[,-toomanynulls]
+```
+
+*cvtd_timestamp* needs to be formatted as a datetime.
+
+```{r}
+train$cvtd_timestamp <- as.POSIXct(train$cvtd_timestamp, format = "%d/%m/%Y %R")
+train$cvtd_timestamp.year <- year(train$cvtd_timestamp)
+train$cvtd_timestamp.month <- month(train$cvtd_timestamp)
+train$cvtd_timestamp.day <- day(train$cvtd_timestamp)
+train$cvtd_timestamp.hour <- hour(train$cvtd_timestamp)
+train$cvtd_timestamp.minute <- minute(train$cvtd_timestamp)
+train$cvtd_timestamp <- NULL
+
+test$cvtd_timestamp <- as.POSIXct(test$cvtd_timestamp, format = "%d/%m/%Y %R")
+test$cvtd_timestamp.year <- year(test$cvtd_timestamp)
+test$cvtd_timestamp.month <- month(test$cvtd_timestamp)
+test$cvtd_timestamp.day <- day(test$cvtd_timestamp)
+test$cvtd_timestamp.hour <- hour(test$cvtd_timestamp)
+test$cvtd_timestamp.minute <- minute(test$cvtd_timestamp)
+test$cvtd_timestamp <- NULL
+```
+
+Center and scale the numeric predictors.
+
+```{r}
+train$roll_belt <- scale(train$roll_belt, center = TRUE, scale = TRUE)
+test$roll_belt <- scale(test$roll_belt, center = TRUE, scale = TRUE)
+train$pitch_belt <- scale(train$pitch_belt, center = TRUE, scale = TRUE)
+test$pitch_belt <- scale(test$pitch_belt, center = TRUE, scale = TRUE)
+train$yaw_belt <- scale(train$yaw_belt, center = TRUE, scale = TRUE)
+test$yaw_belt <- scale(test$yaw_belt, center = TRUE, scale = TRUE)
+train$gyros_belt_x <- scale(train$gyros_belt_x, center = TRUE, scale = TRUE)
+test$gyros_belt_x <- scale(test$gyros_belt_x, center = TRUE, scale = TRUE)
+train$gyros_belt_y <- scale(train$gyros_belt_y, center = TRUE, scale = TRUE)
+test$gyros_belt_y <- scale(test$gyros_belt_y, center = TRUE, scale = TRUE)
+train$gyros_belt_z <- scale(train$gyros_belt_z, center = TRUE, scale = TRUE)
+test$gyros_belt_z <- scale(test$gyros_belt_z, center = TRUE, scale = TRUE)
+train$roll_arm <- scale(train$roll_arm, center = TRUE, scale = TRUE)
+test$roll_arm <- scale(test$roll_arm, center = TRUE, scale = TRUE)
+train$pitch_arm <- scale(train$pitch_arm, center = TRUE, scale = TRUE)
+test$pitch_arm <- scale(test$pitch_arm, center = TRUE, scale = TRUE)
+train$yaw_arm <- scale(train$yaw_arm, center = TRUE, scale = TRUE)
+test$yaw_arm <- scale(test$yaw_arm, center = TRUE, scale = TRUE)
+train$gyros_arm_x <- scale(train$gyros_arm_x, center = TRUE, scale = TRUE)
+test$gyros_arm_x <- scale(test$gyros_arm_x, center = TRUE, scale = TRUE)
+train$gyros_arm_y <- scale(train$gyros_arm_y, center = TRUE, scale = TRUE)
+test$gyros_arm_y <- scale(test$gyros_arm_y, center = TRUE, scale = TRUE)
+train$gyros_arm_z <- scale(train$gyros_arm_z, center = TRUE, scale = TRUE)
+test$gyros_arm_z <- scale(test$gyros_arm_z, center = TRUE, scale = TRUE)
+train$roll_dumbbell <- scale(train$roll_dumbbell, center = TRUE, scale = TRUE)
+test$roll_dumbbell <- scale(test$roll_dumbbell, center = TRUE, scale = TRUE)
+train$pitch_dumbbell <- scale(train$pitch_dumbbell, center = TRUE, scale = TRUE)
+test$pitch_dumbbell <- scale(test$pitch_dumbbell, center = TRUE, scale = TRUE)
+train$yaw_dumbbell <- scale(train$yaw_dumbbell, center = TRUE, scale = TRUE)
+test$yaw_dumbbell <- scale(test$yaw_dumbbell, center = TRUE, scale = TRUE)
+train$gyros_dumbbell_x <- scale(train$gyros_dumbbell_x, center = TRUE, scale = TRUE)
+test$gyros_dumbbell_x <- scale(test$gyros_dumbbell_x, center = TRUE, scale = TRUE)
+train$gyros_dumbbell_y <- scale(train$gyros_dumbbell_y, center = TRUE, scale = TRUE)
+test$gyros_dumbbell_y <- scale(test$gyros_dumbbell_y, center = TRUE, scale = TRUE)
+train$gyros_dumbbell_z <- scale(train$gyros_dumbbell_z, center = TRUE, scale = TRUE)
+test$gyros_dumbbell_z <- scale(test$gyros_dumbbell_z, center = TRUE, scale = TRUE)
+train$magnet_dumbbell_z <- scale(train$magnet_dumbbell_z, center = TRUE, scale = TRUE)
+test$magnet_dumbbell_z <- scale(test$magnet_dumbbell_z, center = TRUE, scale = TRUE)
+train$roll_forearm <- scale(train$roll_forearm, center = TRUE, scale = TRUE)
+test$roll_forearm <- scale(test$roll_forearm, center = TRUE, scale = TRUE)
+train$pitch_forearm <- scale(train$pitch_forearm, center = TRUE, scale = TRUE)
+test$pitch_forearm <- scale(test$pitch_forearm, center = TRUE, scale = TRUE)
+train$yaw_forearm <- scale(train$yaw_forearm, center = TRUE, scale = TRUE)
+test$yaw_forearm <- scale(test$yaw_forearm, center = TRUE, scale = TRUE)
+train$gyros_forearm_x <- scale(train$gyros_forearm_x, center = TRUE, scale = TRUE)
+test$gyros_forearm_x <- scale(test$gyros_forearm_x, center = TRUE, scale = TRUE)
+train$gyros_forearm_y <- scale(train$gyros_forearm_y, center = TRUE, scale = TRUE)
+test$gyros_forearm_y <- scale(test$gyros_forearm_y, center = TRUE, scale = TRUE)
+train$gyros_forearm_z <- scale(train$gyros_forearm_z, center = TRUE, scale = TRUE)
+test$gyros_forearm_z <- scale(test$gyros_forearm_z, center = TRUE, scale = TRUE)
+train$magnet_forearm_y <- scale(train$magnet_forearm_y, center = TRUE, scale = TRUE)
+test$magnet_forearm_y <- scale(test$magnet_forearm_y, center = TRUE, scale = TRUE)
+train$magnet_forearm_z <- scale(train$magnet_forearm_z, center = TRUE, scale = TRUE)
+test$magnet_forearm_z <- scale(test$magnet_forearm_z, center = TRUE, scale = TRUE)
+train$cvtd_timestamp.year <- scale(train$cvtd_timestamp.year, center = TRUE, scale = TRUE)
+test$cvtd_timestamp.year <- scale(test$cvtd_timestamp.year, center = TRUE, scale = TRUE)
+train$cvtd_timestamp.month <- scale(train$cvtd_timestamp.month, center = TRUE, scale = TRUE)
+test$cvtd_timestamp.month <- scale(test$cvtd_timestamp.month, center = TRUE, scale = TRUE)
+
+train$kurtosis_roll_belt <- scale(as.numeric(train$kurtosis_roll_belt), center = TRUE, scale = TRUE)
+test$kurtosis_roll_belt <- scale(as.numeric(test$kurtosis_roll_belt), center = TRUE, scale = TRUE)
+
+train$kurtosis_picth_belt <- scale(as.numeric(train$kurtosis_picth_belt), center = TRUE, scale = TRUE)
+test$kurtosis_picth_belt <- scale(as.numeric(test$kurtosis_picth_belt), center = TRUE, scale = TRUE)
+
+train$skewness_roll_belt <- scale(as.numeric(train$skewness_roll_belt), center = TRUE, scale = TRUE)
+test$skewness_roll_belt <- scale(as.numeric(test$skewness_roll_belt), center = TRUE, scale = TRUE)
+
+train$skewness_roll_belt.1 <- scale(as.numeric(train$skewness_roll_belt.1), center = TRUE, scale = TRUE)
+test$skewness_roll_belt.1 <- scale(as.numeric(test$skewness_roll_belt.1), center = TRUE, scale = TRUE)
+
+train$skewness_yaw_belt <- scale(as.numeric(train$skewness_yaw_belt), center = TRUE, scale = TRUE)
+test$skewness_yaw_belt <- scale(as.numeric(test$skewness_yaw_belt), center = TRUE, scale = TRUE)
+```
+
+Center and scale the integer predictors.
+
+```{r}
+train$raw_timestamp_part_1 <- scale(train$raw_timestamp_part_1, center = TRUE, scale = TRUE)
+test$raw_timestamp_part_1 <- scale(test$raw_timestamp_part_1, center = TRUE, scale = TRUE)
+train$raw_timestamp_part_2 <- scale(train$raw_timestamp_part_2, center = TRUE, scale = TRUE)
+test$raw_timestamp_part_2 <- scale(test$raw_timestamp_part_2, center = TRUE, scale = TRUE)
+train$num_window <- scale(train$num_window, center = TRUE, scale = TRUE)
+test$num_window <- scale(test$num_window, center = TRUE, scale = TRUE)
+train$total_accel_belt <- scale(train$total_accel_belt, center = TRUE, scale = TRUE)
+test$total_accel_belt <- scale(test$total_accel_belt, center = TRUE, scale = TRUE)
+train$accel_belt_x <- scale(train$accel_belt_x, center = TRUE, scale = TRUE)
+test$accel_belt_x <- scale(test$accel_belt_x, center = TRUE, scale = TRUE)
+train$accel_belt_y <- scale(train$accel_belt_y, center = TRUE, scale = TRUE)
+test$accel_belt_y <- scale(test$accel_belt_y, center = TRUE, scale = TRUE)
+train$accel_belt_z <- scale(train$accel_belt_z, center = TRUE, scale = TRUE)
+test$accel_belt_z <- scale(test$accel_belt_z, center = TRUE, scale = TRUE)
+train$magnet_belt_x <- scale(train$magnet_belt_x, center = TRUE, scale = TRUE)
+test$magnet_belt_x <- scale(test$magnet_belt_x, center = TRUE, scale = TRUE)
+train$magnet_belt_y <- scale(train$magnet_belt_y, center = TRUE, scale = TRUE)
+test$magnet_belt_y <- scale(test$magnet_belt_y, center = TRUE, scale = TRUE)
+train$magnet_belt_z <- scale(train$magnet_belt_z, center = TRUE, scale = TRUE)
+test$magnet_belt_z <- scale(test$magnet_belt_z, center = TRUE, scale = TRUE)
+train$total_accel_arm <- scale(train$total_accel_arm, center = TRUE, scale = TRUE)
+test$total_accel_arm <- scale(test$total_accel_arm, center = TRUE, scale = TRUE)
+train$accel_arm_x <- scale(train$accel_arm_x, center = TRUE, scale = TRUE)
+test$accel_arm_x <- scale(test$accel_arm_x, center = TRUE, scale = TRUE)
+train$accel_arm_y <- scale(train$accel_arm_y, center = TRUE, scale = TRUE)
+test$accel_arm_y <- scale(test$accel_arm_y, center = TRUE, scale = TRUE)
+train$accel_arm_z <- scale(train$accel_arm_z, center = TRUE, scale = TRUE)
+test$accel_arm_z <- scale(test$accel_arm_z, center = TRUE, scale = TRUE)
+train$magnet_arm_x <- scale(train$magnet_arm_x, center = TRUE, scale = TRUE)
+test$magnet_arm_x <- scale(test$magnet_arm_x, center = TRUE, scale = TRUE)
+train$magnet_arm_y <- scale(train$magnet_arm_y, center = TRUE, scale = TRUE)
+test$magnet_arm_y <- scale(test$magnet_arm_y, center = TRUE, scale = TRUE)
+train$magnet_arm_z <- scale(train$magnet_arm_z, center = TRUE, scale = TRUE)
+test$magnet_arm_z <- scale(test$magnet_arm_z, center = TRUE, scale = TRUE)
+train$total_accel_dumbbell <- scale(train$total_accel_dumbbell, center = TRUE, scale = TRUE)
+test$total_accel_dumbbell <- scale(test$total_accel_dumbbell, center = TRUE, scale = TRUE)
+train$accel_dumbbell_x <- scale(train$accel_dumbbell_x, center = TRUE, scale = TRUE)
+test$accel_dumbbell_x <- scale(test$accel_dumbbell_x, center = TRUE, scale = TRUE)
+train$accel_dumbbell_y <- scale(train$accel_dumbbell_y, center = TRUE, scale = TRUE)
+test$accel_dumbbell_y <- scale(test$accel_dumbbell_y, center = TRUE, scale = TRUE)
+train$accel_dumbbell_z <- scale(train$accel_dumbbell_z, center = TRUE, scale = TRUE)
+test$accel_dumbbell_z <- scale(test$accel_dumbbell_z, center = TRUE, scale = TRUE)
+train$magnet_dumbbell_x <- scale(train$magnet_dumbbell_x, center = TRUE, scale = TRUE)
+test$magnet_dumbbell_x <- scale(test$magnet_dumbbell_x, center = TRUE, scale = TRUE)
+train$magnet_dumbbell_y <- scale(train$magnet_dumbbell_y, center = TRUE, scale = TRUE)
+test$magnet_dumbbell_y <- scale(test$magnet_dumbbell_y, center = TRUE, scale = TRUE)
+train$total_accel_forearm <- scale(train$total_accel_forearm, center = TRUE, scale = TRUE)
+test$total_accel_forearm <- scale(test$total_accel_forearm, center = TRUE, scale = TRUE)
+train$accel_forearm_x <- scale(train$accel_forearm_x, center = TRUE, scale = TRUE)
+test$accel_forearm_x <- scale(test$accel_forearm_x, center = TRUE, scale = TRUE)
+train$accel_forearm_y <- scale(train$accel_forearm_y, center = TRUE, scale = TRUE)
+test$accel_forearm_y <- scale(test$accel_forearm_y, center = TRUE, scale = TRUE)
+train$accel_forearm_z <- scale(train$accel_forearm_z, center = TRUE, scale = TRUE)
+test$accel_forearm_z <- scale(test$accel_forearm_z, center = TRUE, scale = TRUE)
+train$magnet_forearm_x <- scale(train$magnet_forearm_x, center = TRUE, scale = TRUE)
+test$magnet_forearm_x <- scale(test$magnet_forearm_x, center = TRUE, scale = TRUE)
+train$cvtd_timestamp.day <- scale(train$cvtd_timestamp.day, center = TRUE, scale = TRUE)
+test$cvtd_timestamp.day <- scale(test$cvtd_timestamp.day, center = TRUE, scale = TRUE)
+train$cvtd_timestamp.hour <- scale(train$cvtd_timestamp.hour, center = TRUE, scale = TRUE)
+test$cvtd_timestamp.hour <- scale(test$cvtd_timestamp.hour, center = TRUE, scale = TRUE)
+train$cvtd_timestamp.minute <- scale(train$cvtd_timestamp.minute, center = TRUE, scale = TRUE)
+test$cvtd_timestamp.minute <- scale(test$cvtd_timestamp.minute, center = TRUE, scale = TRUE)
+```
+
+Format factors.
+
+```{r}
+train$user_name <- as.factor(train$user_name)
+train$classe <- as.factor(train$classe)
+train$new_window <- as.factor(train$new_window)
+train$kurtosis_yaw_belt <- as.factor(train$kurtosis_yaw_belt)
+
+test$user_name <- as.factor(test$user_name)
+#test$classe <- as.factor(test$classe)
+test$new_window <- as.factor(test$new_window)
+test$kurtosis_yaw_belt <- as.factor(test$kurtosis_yaw_belt)
+```
+
+Impute missing values.
+
+```{r}
+train$kurtosis_roll_belt[is.na(train$kurtosis_roll_belt)] <- median(train$kurtosis_roll_belt[inSplit], na.rm = TRUE)
+test$kurtosis_roll_belt[is.na(test$kurtosis_roll_belt)] <- median(test$kurtosis_roll_belt[inSplit], na.rm = TRUE)
+
+train$kurtosis_picth_belt[is.na(train$kurtosis_picth_belt)] <- median(train$kurtosis_picth_belt[inSplit], na.rm = TRUE)
+test$kurtosis_picth_belt[is.na(test$kurtosis_picth_belt)] <- median(test$kurtosis_picth_belt[inSplit], na.rm = TRUE)
+
+train$skewness_roll_belt[is.na(train$skewness_roll_belt)] <- median(train$skewness_roll_belt[inSplit], na.rm = TRUE)
+test$skewness_roll_belt[is.na(test$skewness_roll_belt)] <- median(test$skewness_roll_belt[inSplit], na.rm = TRUE)
+
+train$skewness_roll_belt.1[is.na(train$skewness_roll_belt.1)] <- median(train$skewness_roll_belt.1[inSplit], na.rm = TRUE)
+test$skewness_roll_belt.1[is.na(test$skewness_roll_belt.1)] <- median(test$skewness_roll_belt.1[inSplit], na.rm = TRUE)
+```
+
+Split the training data for cross validation.
+
+```{r}
+train1 <- train[inSplit, -exclude.predictors]
+train2 <- train[-inSplit, -exclude.predictors]
+```
+
+Remove zero- and near zero-variance predictors.
+
+```{r}
+nzv <- nearZeroVar(train1)
+
+train1 <- train1[, -nzv]
+train2 <- train2[, -nzv]
+```
+
+
+#Analysis
+
+```{r}
+summary(train$classe)
+```
+
+```{r}
+fit.rpart <- train(classe~., data = train1, method = "rpart")
+fit.gbm <- train(classe ~ ., data = train1, method = "gbm")
+#fit.svm <- svm(classe ~ ., train1)
+fit.rf <- train(classe ~ ., data = train1, method = "rf")
+fit.lda <- train(classe ~ ., data = train1, method = "lda")
+```
+
+```{r}
+pred.rpart <- predict(fit.rpart, train2)
+pred.gbm <- predict(fit.gbm, train2)
+#pred.svm <- predict(fit.svm, train2)
+pred.rf <- predict(fit.rf, train2)
+pred.lda <- predict(fit.lda, train2)
+```
+
+```{r}
+#confusionMatrix(pred.rpart, train2$classe)
+#confusionMatrix(pred.gbm, train2$classe)
+#confusionMatrix(pred.svm, train2$classe)
+#confusionMatrix(pred.rf, train2$classe)
+#confusionMatrix(pred.lda, train2$classe)
+```
+
+#Model and Feature Selection
+
+#Appendix
+
+```{r}
+#str(train)
+
+summary(train)
+```
