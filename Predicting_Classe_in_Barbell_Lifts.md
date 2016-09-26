@@ -2032,7 +2032,7 @@ predictors(fit.gbm)
 
 
 ```r
-test$prediction <- predict(fit.rpart, test)
+test$prediction <- predict(fit.gbm, test)
 test[,which(names(test) %in% c("problem_id", "prediction"))]
 ```
 
@@ -2040,24 +2040,24 @@ test[,which(names(test) %in% c("problem_id", "prediction"))]
 ##    problem_id prediction
 ## 1           1          E
 ## 2           2          A
-## 3           3          C
+## 3           3          A
 ## 4           4          E
 ## 5           5          C
-## 6           6          C
-## 7           7          C
-## 8           8          C
-## 9           9          A
+## 6           6          B
+## 7           7          D
+## 8           8          D
+## 9           9          E
 ## 10         10          E
-## 11         11          A
-## 12         12          C
-## 13         13          C
+## 11         11          E
+## 12         12          E
+## 13         13          E
 ## 14         14          A
-## 15         15          C
-## 16         16          C
+## 15         15          E
+## 16         16          E
 ## 17         17          E
-## 18         18          A
+## 18         18          E
 ## 19         19          E
-## 20         20          B
+## 20         20          E
 ```
 
 #Appendix

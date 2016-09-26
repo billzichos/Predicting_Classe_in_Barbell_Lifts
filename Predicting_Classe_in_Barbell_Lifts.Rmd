@@ -7,7 +7,7 @@ output:
     keep_md: yes
 ---
 
-I developed a model that with >99% accuracy, predicts the classe for different barbell lifts.  The best model used gradient boosting and 40 predictors including some features engineers from the date.  The rest of this document is organized in the following sections.
+I developed a model that with >99% accuracy, predicts the classe for different barbell lifts.  The best model used gradient boosting and 40 predictors including some features engineered from the date.  The rest of this document is organized in the following sections.
 
 - Setup
 
@@ -319,7 +319,7 @@ predictors(fit.gbm)
 #Prediction
 
 ```{r}
-test$prediction <- predict(fit.rpart, test)
+test$prediction <- predict(fit.gbm, test)
 test[,which(names(test) %in% c("problem_id", "prediction"))]
 ```
 
