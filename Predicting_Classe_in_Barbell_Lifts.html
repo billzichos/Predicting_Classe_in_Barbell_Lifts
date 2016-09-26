@@ -68,10 +68,13 @@ img {
 </div>
 
 
-<div id="intro" class="section level1">
-<h1>Intro</h1>
-<p>[Executive Summary here]</p>
-</div>
+<p>I developed a model that with &gt;99% accuracy, predicts the classe for different barbell lifts. The best model used gradient boosting and 40 predictors including some features engineers from the date. The rest of this document is organized in the following sections.</p>
+<ul>
+<li><p>Setup</p></li>
+<li><p>Analysis</p></li>
+<li><p>Model and Feature Selection</p></li>
+<li><p>Prediction</p></li>
+</ul>
 <div id="setup" class="section level1">
 <h1>Setup</h1>
 <pre class="r"><code>library(&quot;caret&quot;)
@@ -298,30 +301,8 @@ train2 &lt;- train2[, -nzv]</code></pre>
 <pre class="r"><code>summary(train$classe)</code></pre>
 <pre><code>##    A    B    C    D    E 
 ## 5580 3797 3422 3216 3607</code></pre>
-<pre class="r"><code>fit.rpart &lt;- train(classe~., data = train1, method = &quot;rpart&quot;)</code></pre>
-<pre><code>## Loading required package: rpart</code></pre>
-<pre class="r"><code>fit.gbm &lt;- train(classe ~ ., data = train1, method = &quot;gbm&quot;)</code></pre>
-<pre><code>## Loading required package: gbm</code></pre>
-<pre><code>## Warning: package 'gbm' was built under R version 3.1.3</code></pre>
-<pre><code>## Loading required package: survival
-## Loading required package: splines
-## 
-## Attaching package: 'survival'
-## 
-## The following object is masked from 'package:caret':
-## 
-##     cluster
-## 
-## Loading required package: parallel
-## Loaded gbm 2.1.1
-## Loading required package: plyr</code></pre>
-<pre><code>## Warning: package 'plyr' was built under R version 3.1.3</code></pre>
-<pre><code>## 
-## Attaching package: 'plyr'
-## 
-## The following object is masked from 'package:lubridate':
-## 
-##     here</code></pre>
+<pre class="r"><code>fit.rpart &lt;- train(classe~., data = train1, method = &quot;rpart&quot;)
+fit.gbm &lt;- train(classe ~ ., data = train1, method = &quot;gbm&quot;)</code></pre>
 <pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
 ##      1        1.6094             nan     0.1000    0.1327
 ##      2        1.5208             nan     0.1000    0.0868
@@ -1844,33 +1825,6 @@ train2 &lt;- train2[, -nzv]</code></pre>
 <pre class="r"><code>#fit.svm &lt;- svm(classe ~ ., train1)
 #fit.rf &lt;- train(classe ~ ., data = train1, method = &quot;rf&quot;)
 fit.lda &lt;- train(classe ~ ., data = train1, method = &quot;lda&quot;)</code></pre>
-<pre><code>## Loading required package: MASS</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
 <pre class="r"><code>pred.rpart &lt;- predict(fit.rpart, train2)
 pred.gbm &lt;- predict(fit.gbm, train2)
 #pred.svm &lt;- predict(fit.svm, train2)
@@ -1977,7 +1931,10 @@ confusionMatrix(pred.lda, train2$classe)</code></pre>
 </div>
 <div id="model-and-feature-selection" class="section level1">
 <h1>Model and Feature Selection</h1>
-<p>Recursive Partitioning/Decision Trees Accuracy: <strong>0.5998</strong> Gradient Boosting (GBM) Accuracy: <strong>0.9954</strong> Random Forest Accuracy: <strong>NA</strong> Linear Discriminant Analysis (LDA) Accuracy: <strong>0.8413</strong></p>
+<p>Recursive Partitioning/Decision Trees Accuracy: <strong>0.5998</strong></p>
+<p>Gradient Boosting (GBM) Accuracy: <strong>0.9954</strong></p>
+<p>Random Forest Accuracy: <strong>NA</strong></p>
+<p>Linear Discriminant Analysis (LDA) Accuracy: <strong>0.8413</strong></p>
 <p>At 99.54% Accuracy, we will use the GBM model for predicting new observations.</p>
 <p>The best predictors for this dataset are below.</p>
 <pre class="r"><code>predictors(fit.gbm)</code></pre>
