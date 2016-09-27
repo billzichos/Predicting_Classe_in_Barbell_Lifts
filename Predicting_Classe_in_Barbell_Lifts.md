@@ -2,7 +2,7 @@
 Bill Zichos  
 September 25, 2016  
 
-I developed a model that with >99% accuracy, predicts the classe for different barbell lifts.  The best model used gradient boosting and 40 predictors including some features engineers from the date.  The rest of this document is organized in the following sections.
+I developed a model that with >99% accuracy, predicts the classe for different barbell lifts.  The best model used gradient boosting and 40 predictors including some features engineered from the date.  The rest of this document is organized in the following sections.
 
 - Setup
 

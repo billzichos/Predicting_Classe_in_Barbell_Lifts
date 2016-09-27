@@ -274,7 +274,7 @@ train2 <- train2[, -nzv]
 summary(train$classe)
 ```
 
-```{r, warning=FALSE, message=FALSE}
+```{r, warning=FALSE, message=FALSE, results='hide}
 fit.rpart <- train(classe~., data = train1, method = "rpart")
 fit.gbm <- train(classe ~ ., data = train1, method = "gbm")
 #fit.svm <- svm(classe ~ ., train1)
